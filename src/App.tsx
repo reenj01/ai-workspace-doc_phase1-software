@@ -3,6 +3,7 @@ import { io } from 'socket.io-client' // io = create socket connection
 import './App.css'
 
 type AgentState =
+  | 'resting'
   | 'working'
   | 'reading'
   | 'thinking'
@@ -26,8 +27,8 @@ function App() {
     { name: "Codex", 
       id: "codex", 
       role: "Coding Agent", 
-      state: "working", 
-      activity: "editing project files", 
+      state: "resting", 
+      activity: "Online but not doing anything", 
       position: "left"
     },
     { name: "Claude", 
@@ -72,30 +73,87 @@ function App() {
     }
   }, [])
 
-  function updateClaudeState(newState: AgentState, newActivity: string) {
+  useEffect(() => {
+    const finishedAgents = agents.filter((agent) => agent.state === 'finished')
+
+    if (finishedAgents.length === 0) {
+      return
+    }
+
+    const timeoutIds = finishedAgents.map((finishedAgent) =>
+      window.setTimeout(() => {
+        fetch('http://localhost:3001/events', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            agentId: finishedAgent.id,
+            state: 'resting',
+            activity: 'Online but not doing anything',
+          }),
+        }).catch(() => {
+          setAgents((currentAgents) =>
+            currentAgents.map((agent) =>
+              agent.id === finishedAgent.id
+                ? {
+                    ...agent,
+                    state: 'resting',
+                    activity: 'Online but not doing anything',
+                    lastUpdate: new Date().toISOString(),
+                  }
+                : agent
+            )
+          )
+        })
+      }, 60000)
+    )
+
+    return () => {
+      timeoutIds.forEach((timeoutId) => window.clearTimeout(timeoutId))
+    }
+  }, [agents])
+
+  function updateAgentState(agentId: string, newState: AgentState, newActivity: string) {
     fetch('http://localhost:3001/events', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        agentId: 'claude',
+        agentId,
         state: newState,
         activity: newActivity,
       }),
     }).catch(() => {
       setAgents((currentAgents) =>
         currentAgents.map((agent) =>
-          agent.id === 'claude'
+          agent.id === agentId
             ? {
                 ...agent,
                 state: 'blocked',
-                activity: 'Backend disconnected. Cannot send Claude update.',
+                activity: `Backend disconnected. Cannot send ${agent.name} update.`,
                 lastUpdate: new Date().toISOString(),
               }
             : agent
         )
       )
+    })
+  }
+
+  function updateClaudeState(newState: AgentState, newActivity: string) {
+    updateAgentState('claude', newState, newActivity)
+  }
+
+  function updateCodexState(newState: AgentState, newActivity: string) {
+    updateAgentState('codex', newState, newActivity)
+  }
+
+  function startCodexSession() {
+    fetch('http://localhost:3001/codex/open', {
+      method: 'POST',
+    }).catch(() => {
+      updateCodexState('blocked', 'Backend disconnected. Cannot open Codex session.')
     })
   }
 
@@ -128,25 +186,63 @@ function App() {
       <div className='controls'>
         <p>Control Buttons</p>
 
-        <div className='button-row'>
-          <button onClick={() => updateClaudeState('thinking', 'Thinking through the research plan')}>
-            Claude Thinking
-          </button>
-          <button onClick={() => updateClaudeState('working', 'Summarizing project context')}>
-            Claude Working
-          </button>
-          <button onClick={() => updateClaudeState('running_tool', 'Running a document search')}>
-            Claude Running Tool
-          </button>
-          <button onClick={() => updateClaudeState('needs_approval', 'Waiting for your approval')}>
-            Claude Needs Approval
-          </button>
-          <button onClick={() => updateClaudeState('blocked', 'Blocked by missing information')}>
-            Claude Blocked
-          </button>
-          <button onClick={() => updateClaudeState('finished', 'Finished reading the documentation')}>
-            Claude Finished
-          </button>
+        <div className='control-panels'>
+          <div className='control-group'>
+            <p className='control-label'>Codex</p>
+            <button className='start-session-button' onClick={startCodexSession}>
+              Open Codex Session
+            </button>
+            <div className='button-grid'>
+              <button onClick={() => updateCodexState('thinking', 'Thinking through the coding task')}>
+                Thinking
+              </button>
+              <button onClick={() => updateCodexState('working', 'Working on project files')}>
+                Working
+              </button>
+              <button onClick={() => updateCodexState('running_tool', 'Running a development tool')}>
+                Running Tool
+              </button>
+              <button onClick={() => updateCodexState('needs_approval', 'Waiting for your approval')}>
+                Needs Approval
+              </button>
+              <button onClick={() => updateCodexState('blocked', 'Blocked by missing information')}>
+                Blocked
+              </button>
+              <button onClick={() => updateCodexState('finished', 'Finished the current coding task')}>
+                Finished
+              </button>
+              <button onClick={() => updateCodexState('resting', 'Online but not doing anything')}>
+                Resting
+              </button>
+            </div>
+          </div>
+
+          <div className='control-group'>
+            <p className='control-label'>Claude</p>
+            <div className='button-grid'>
+              <button onClick={() => updateClaudeState('thinking', 'Thinking through the research plan')}>
+                Thinking
+              </button>
+              <button onClick={() => updateClaudeState('working', 'Summarizing project context')}>
+                Working
+              </button>
+              <button onClick={() => updateClaudeState('running_tool', 'Running a document search')}>
+                Running Tool
+              </button>
+              <button onClick={() => updateClaudeState('needs_approval', 'Waiting for your approval')}>
+                Needs Approval
+              </button>
+              <button onClick={() => updateClaudeState('blocked', 'Blocked by missing information')}>
+                Blocked
+              </button>
+              <button onClick={() => updateClaudeState('finished', 'Finished reading the documentation')}>
+                Finished
+              </button>
+              <button onClick={() => updateClaudeState('resting', 'Online but not doing anything')}>
+                Resting
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </main>

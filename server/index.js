@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
+import { execFile } from 'child_process'
 
 const app = express()
 const PORT = 3001
@@ -31,8 +32,8 @@ let agents = [
     id: 'codex',
     name: 'Codex',
     role: 'Coding Agent',
-    state: 'working',
-    activity: 'Editing project files',
+    state: 'resting',
+    activity: 'Online but not doing anything',
     position: 'left',
     lastUpdate: new Date().toISOString()
   },
@@ -68,12 +69,44 @@ const claudeStateMap = {
   claude_finished: 'finished',
 }
 
+const codexStateMap = {
+  codex_thinking: 'thinking',
+  codex_working: 'working',
+  codex_tool_use: 'running_tool',
+  codex_needs_approval: 'needs_approval',
+  codex_blocked: 'blocked',
+  codex_finished: 'finished',
+  codex_resting: 'resting',
+}
+
+function updateAgent(agentId, state, activity) {
+  agents = agents.map((agent) =>
+    agent.id === agentId
+      ? {
+          ...agent,
+          state,
+          activity,
+          lastUpdate: new Date().toISOString()
+        }
+      : agent
+  )
+
+  const updatedAgent = agents.find((agent) => agent.id === agentId)
+  io.emit('agent:update', updatedAgent)
+
+  return updatedAgent
+}
+
 // POST /events = send an agent update
 app.post('/events', (req, res) => {
   const { agentId, eventType, state, activity } = req.body
 
   //if the request has eventType, use the mapping table. Else, use the state directly
-  const mappedState = eventType ? claudeStateMap[eventType] : state
+  const eventStateMap = {
+    ...claudeStateMap,
+    ...codexStateMap,
+  }
+  const mappedState = eventType ? eventStateMap[eventType] : state
   // protect from random or misspelled events
   if (!mappedState) {
   return res.status(400).json({
@@ -91,25 +124,26 @@ app.post('/events', (req, res) => {
     })
   }
 
-  agents = agents.map((agent) =>
-    agent.id === agentId
-      ? {
-          ...agent, //keeps the old agent data
-          state: mappedState,
-          activity,
-          lastUpdate: new Date().toISOString() //records when this update happened
-        }
-      : agent
-  )
-
-  const updatedAgent = agents.find((agent) => agent.id === agentId)
-
-  // after backend updates an agent, tell all connected frontend
-  io.emit('agent:update', updatedAgent)
+  const updatedAgent = updateAgent(agentId, mappedState, activity)
 
   res.json({
     success: true,
     agent: updatedAgent,
+  })
+})
+
+app.post('/codex/open', (req, res) => {
+  const thinkingAgent = updateAgent('codex', 'thinking', 'Opening Codex session')
+
+  execFile('open', ['-a', 'Codex'], () => {})
+
+  setTimeout(() => {
+    updateAgent('codex', 'working', 'Codex session is open')
+  }, 3000)
+
+  res.json({
+    success: true,
+    agent: thinkingAgent,
   })
 })
 

@@ -89,6 +89,16 @@ header {
   font-size: 14px;
 }
   /* various state manual colors*/
+  .state-resting {
+    border-color: #64748b;
+    box-shadow: 0 0 16px rgba(100, 116, 139, 0.18);
+  }
+
+  .state-badge-resting {
+    background-color: #475569;
+    color: white;
+  }
+
   .state-working {
     border-color: #2563eb;
     box-shadow: 0 0 20px rgba(37, 99, 235, 0.25);
@@ -178,19 +188,44 @@ header {
   align-items: center;
 }
 
-.button-row {
+.control-panels {
   display: flex;
-  flex-wrap: wrap;
   justify-content: center;
-  gap: 12px;
+  gap: 24px;
+  width: 100%;
+}
+
+.control-group {
+  width: min(100%, 520px);
+}
+
+.control-label {
+  margin: 0 0 8px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.start-session-button {
+  width: 100%;
+  margin-bottom: 8px;
+  background: #111827;
+  color: white;
+  border-color: #111827;
+}
+
+.button-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
 }
 
 button {
   border: 1px solid #222;
-  border-radius: 8px;
+  border-radius: 6px;
   background: #ffffff;
-  padding: 10px 14px;
+  padding: 7px 9px;
   font: inherit;
+  font-size: 13px;
   cursor: pointer;
 }
 
