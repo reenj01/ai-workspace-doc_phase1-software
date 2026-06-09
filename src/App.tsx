@@ -23,7 +23,7 @@ type Agent = {
 }
 
 function App() {
-  const startingAgents: Agent[] = [
+  const fallbackAgents: Agent[] = [
     { name: "Codex", 
       id: "codex", 
       role: "Coding Agent", 
@@ -47,22 +47,36 @@ function App() {
     }
   ]
 
-  const [agents, setAgents] = useState(startingAgents) 
+  const [agents, setAgents] = useState(fallbackAgents) 
+  const [backendConnected, setBackendConnected] = useState(false)
 
-  //connects React to backend
   useEffect(() => {
     fetch('http://localhost:3001/agents')
       .then((response) => response.json())
       .then((backendAgents: Agent[]) => {
-        setAgents(backendAgents) // replace hardcoded frontend agents with backend agents
+        setAgents(backendAgents)
+        setBackendConnected(true)
+      })
+      .catch(() => {
+        setBackendConnected(false)
       })
 
     const socket = io('http://localhost:3001')
 
-    //listens for agent:update events
+    socket.on('connect', () => {
+      setBackendConnected(true)
+    })
+
+    socket.on('disconnect', () => {
+      setBackendConnected(false)
+    })
+
+    socket.on('connect_error', () => {
+      setBackendConnected(false)
+    })
+
     socket.on('agent:update', (updatedAgent) => {
       setAgents((currentAgents) => 
-        //updates matching agent on screen
         currentAgents.map((agent) => 
           agent.id === updatedAgent.id ? updatedAgent : agent
         )
@@ -161,6 +175,9 @@ function App() {
     <main>
       <header>
         <h1>AI Workspace Doc</h1>
+        <p className={`connection-status ${backendConnected ? 'connection-online' : 'connection-offline'}`}>
+          Backend {backendConnected ? 'connected' : 'disconnected'}
+        </p>
         </header>
       <section className='agent-room'>
         <div className='agent-grid'>

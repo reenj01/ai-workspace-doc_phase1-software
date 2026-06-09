@@ -12,6 +12,25 @@ header {
   margin-bottom: 24px;
 }
 
+.connection-status {
+  display: inline-block;
+  margin: 8px 0 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.connection-online {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.connection-offline {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
 .agent-room {
   width: min(100%, 100%);
   flex: 1;

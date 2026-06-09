@@ -24,6 +24,7 @@ External agent event
 - Socket.IO realtime updates from backend to frontend
 - Three visible agents: Codex, Claude, and ChatGPT
 - Open Codex Session button that opens or brings Codex Desktop forward
+- Backend connected/disconnected status banner
 - Claude state test buttons in the UI
 - Backend event endpoint for external updates
 - Claude event sender script
@@ -56,6 +57,7 @@ phase1-software/
     index.js              Backend server and realtime event broadcaster
     sendClaudeEvent.js    Helper script for sending Claude events
     sendCodexEvent.js     Helper script for sending Codex events
+    sendCodexNotify.js    Wrapper for Codex turn-ended notifications
   src/
     App.tsx               Main React app and agent UI
     App.css               Layout and state styling
@@ -133,7 +135,7 @@ node server/sendCodexEvent.js codex_finished "Codex finished the current turn"
 Expected result:
 
 ```text
-The Codex card changes to finished in the browser, then returns to resting after 15 seconds.
+The Codex card changes to finished in the browser, then returns to resting after 60 seconds.
 ```
 
 ## Open A Codex Session
@@ -153,7 +155,7 @@ Codex changes to thinking
 Codex Desktop opens or comes to the front
 after 3 seconds, Codex changes to working
 when Codex turn-ended notify fires, Codex changes to finished
-after 15 seconds, Codex returns to resting
+after 60 seconds, Codex returns to resting
 ```
 
 This is a no-permission pseudo-hook. It does not read the screen or monitor the Codex UI. It uses the button click as the session-start signal and Codex's existing notify behavior as the session-finished signal.
@@ -198,6 +200,11 @@ claude_finished -> finished
 Current Codex event mappings:
 
 ```text
+codex_thinking -> thinking
+codex_working -> working
+codex_tool_use -> running_tool
+codex_needs_approval -> needs_approval
+codex_blocked -> blocked
 codex_finished -> finished
 codex_resting -> resting
 ```
