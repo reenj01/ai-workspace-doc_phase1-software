@@ -1,6 +1,17 @@
 import { useEffect, useState } from 'react' //useEffect = connect to socket when app loads
 import { io } from 'socket.io-client' // io = create socket connection
 import './App.css'
+import bedroom from './assets/room/bedroom.svg'
+import codexIcon from './assets/agents/codex.svg'
+import claudeIcon from './assets/agents/claude.svg'
+import thoughtBubble from './assets/states/thought-bubble.svg'
+import restingIcon from './assets/states/resting.svg'
+import thinkingIcon from './assets/states/thinking.svg'
+import workingIcon from './assets/states/working.svg'
+import runningToolIcon from './assets/states/running_tool.svg'
+import needsApprovalIcon from './assets/states/needs_approval.svg'
+import blockedIcon from './assets/states/blocked.svg'
+import finishedIcon from './assets/states/finished.svg'
 
 type AgentState =
   | 'resting'
@@ -20,6 +31,24 @@ type Agent = {
   activity: string
   position: string
   lastUpdate?: string
+}
+
+type BackendStatus = 'checking' | 'online' | 'offline'
+
+const stateIcons: Record<AgentState, string> = {
+  resting: restingIcon,
+  working: workingIcon,
+  reading: thinkingIcon,
+  thinking: thinkingIcon,
+  running_tool: runningToolIcon,
+  needs_approval: needsApprovalIcon,
+  blocked: blockedIcon,
+  finished: finishedIcon,
+}
+
+const agentIcons: Record<string, string> = {
+  codex: codexIcon,
+  claude: claudeIcon,
 }
 
 function App() {
@@ -48,31 +77,31 @@ function App() {
   ]
 
   const [agents, setAgents] = useState(fallbackAgents) 
-  const [backendConnected, setBackendConnected] = useState(false)
+  const [backendStatus, setBackendStatus] = useState<BackendStatus>('checking')
 
   useEffect(() => {
     fetch('http://localhost:3001/agents')
       .then((response) => response.json())
       .then((backendAgents: Agent[]) => {
+        setBackendStatus('online')
         setAgents(backendAgents)
-        setBackendConnected(true)
       })
       .catch(() => {
-        setBackendConnected(false)
+        setBackendStatus('offline')
       })
 
     const socket = io('http://localhost:3001')
 
     socket.on('connect', () => {
-      setBackendConnected(true)
+      setBackendStatus('online')
     })
 
     socket.on('disconnect', () => {
-      setBackendConnected(false)
+      setBackendStatus('offline')
     })
 
     socket.on('connect_error', () => {
-      setBackendConnected(false)
+      setBackendStatus('offline')
     })
 
     socket.on('agent:update', (updatedAgent) => {
@@ -120,7 +149,7 @@ function App() {
             )
           )
         })
-      }, 60000)
+      }, 30000)
     )
 
     return () => {
@@ -128,140 +157,23 @@ function App() {
     }
   }, [agents])
 
-  function updateAgentState(agentId: string, newState: AgentState, newActivity: string) {
-    fetch('http://localhost:3001/events', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        agentId,
-        state: newState,
-        activity: newActivity,
-      }),
-    }).catch(() => {
-      setAgents((currentAgents) =>
-        currentAgents.map((agent) =>
-          agent.id === agentId
-            ? {
-                ...agent,
-                state: 'blocked',
-                activity: `Backend disconnected. Cannot send ${agent.name} update.`,
-                lastUpdate: new Date().toISOString(),
-              }
-            : agent
-        )
-      )
-    })
-  }
+  const visibleAgents = agents.filter((agent) => agent.id === 'codex' || agent.id === 'claude')
 
-  function updateClaudeState(newState: AgentState, newActivity: string) {
-    updateAgentState('claude', newState, newActivity)
-  }
-
-  function updateCodexState(newState: AgentState, newActivity: string) {
-    updateAgentState('codex', newState, newActivity)
-  }
-
-  function startCodexSession() {
-    fetch('http://localhost:3001/codex/open', {
-      method: 'POST',
-    }).catch(() => {
-      updateCodexState('blocked', 'Backend disconnected. Cannot open Codex session.')
-    })
-  }
-
-  return ( //display UI
-    <main>
-      <header>
-        <h1>AI Workspace Doc</h1>
-        <p className={`connection-status ${backendConnected ? 'connection-online' : 'connection-offline'}`}>
-          Backend {backendConnected ? 'connected' : 'disconnected'}
-        </p>
-        </header>
-      <section className='agent-room'>
-        <div className='agent-grid'>
-          {agents.map((agent) => (
-            <div className={`agent-card position-${agent.position} state-${agent.state}`} key={agent.id}>
-              <div className='agent-avatar'>{agent.name[0]}</div>
-              <h2 className='agent-name'>{agent.name}</h2>
-              <p className='agent-role'>{agent.role}</p>
-              <p className={`agent-state state-badge-${agent.state}`}>State: {agent.state}</p>
-              <p className='agent-activity'>{agent.activity}</p>
-
-              {/* only show this if the agent has a lastUpdate */}
-              {agent.lastUpdate && ( 
-                <p className="agent-updated">
-                  Updated: {new Date(agent.lastUpdate).toLocaleTimeString()}
-                </p>
-              )}
-
-            </div>
-          ))}
-        </div>
-      </section>
-      <div className='controls'>
-        <p>Control Buttons</p>
-
-        <div className='control-panels'>
-          <div className='control-group'>
-            <p className='control-label'>Codex</p>
-            <button className='start-session-button' onClick={startCodexSession}>
-              Open Codex Session
-            </button>
-            <div className='button-grid'>
-              <button onClick={() => updateCodexState('thinking', 'Thinking through the coding task')}>
-                Thinking
-              </button>
-              <button onClick={() => updateCodexState('working', 'Working on project files')}>
-                Working
-              </button>
-              <button onClick={() => updateCodexState('running_tool', 'Running a development tool')}>
-                Running Tool
-              </button>
-              <button onClick={() => updateCodexState('needs_approval', 'Waiting for your approval')}>
-                Needs Approval
-              </button>
-              <button onClick={() => updateCodexState('blocked', 'Blocked by missing information')}>
-                Blocked
-              </button>
-              <button onClick={() => updateCodexState('finished', 'Finished the current coding task')}>
-                Finished
-              </button>
-              <button onClick={() => updateCodexState('resting', 'Online but not doing anything')}>
-                Resting
-              </button>
-            </div>
-          </div>
-
-          <div className='control-group'>
-            <p className='control-label'>Claude</p>
-            <div className='button-grid'>
-              <button onClick={() => updateClaudeState('thinking', 'Thinking through the research plan')}>
-                Thinking
-              </button>
-              <button onClick={() => updateClaudeState('working', 'Summarizing project context')}>
-                Working
-              </button>
-              <button onClick={() => updateClaudeState('running_tool', 'Running a document search')}>
-                Running Tool
-              </button>
-              <button onClick={() => updateClaudeState('needs_approval', 'Waiting for your approval')}>
-                Needs Approval
-              </button>
-              <button onClick={() => updateClaudeState('blocked', 'Blocked by missing information')}>
-                Blocked
-              </button>
-              <button onClick={() => updateClaudeState('finished', 'Finished reading the documentation')}>
-                Finished
-              </button>
-              <button onClick={() => updateClaudeState('resting', 'Online but not doing anything')}>
-                Resting
-              </button>
-            </div>
-          </div>
-        </div>
+  return (
+    <main className='workspace-scene'>
+      <div className={`backend-status backend-status-${backendStatus}`}>
+        Backend {backendStatus}
       </div>
+      <img className='room-background' src={bedroom} alt='' draggable={false} />
+      <section className='agents-layer'>
+        {visibleAgents.map((agent) => (
+          <div className={`visual-agent visual-agent-${agent.id}`} key={agent.id}>
+            <img className='thought-bubble' src={thoughtBubble} alt='' draggable={false} />
+            <img className={`state-icon state-icon-${agent.state}`} src={stateIcons[agent.state]} alt='' draggable={false} />
+            <img className='agent-sprite' src={agentIcons[agent.id]} alt='' draggable={false} />
+          </div>
+          ))}
+      </section>
     </main>
   )
 }

@@ -63,9 +63,12 @@ app.get('/agents', (req, res) => {
 })
 
 const claudeStateMap = {
+  claude_resting: 'resting',
+  claude_thinking: 'thinking',
   claude_working: 'working',
   claude_tool_use: 'running_tool',
   claude_needs_approval: 'needs_approval',
+  claude_blocked: 'blocked',
   claude_finished: 'finished',
 }
 
