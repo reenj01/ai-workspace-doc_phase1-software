@@ -1,40 +1,63 @@
 # AI Workspace Dock - Phase 1 Software
 
-This is the Phase 1 software prototype for an AI Workspace Dock. Instead of switching between multiple windows, tabs, and apps on a single screen to check which agent needs attention, the display acts as an ambient status dock. Each agent is represented visually, making it easy to glance over and understand what is happening. Tapping or clicking an agent on the display opens the corresponding AI app or workspace on my desktop.
+This is the Phase 1 software prototype for an AI Workspace Dock: a small ambient display where AI agents appear as characters inside a room. Instead of checking multiple app windows to see whether an AI agent is done, thinking, blocked, or waiting, the display shows each agent's current state visually.
 
-The current prototype tracks three agents:
+The current prototype is running on a Raspberry Pi 5 connected to a 5in touchscreen display. Claude Code and Codex run on the MacBook, then send state events over the local network to the backend running on the Raspberry Pi.
 
-- Codex: coding agent
-- Claude: research/tool-use agent
-- ChatGPT: ideas agent
-
-The main goal of this phase is to make sure the software pipeline functions as intended:
+## Current Setup
 
 ```text
-External agent event
--> backend receives event
--> backend broadcasts update
--> React frontend updates the visible agent state
+Claude Code / Codex on MacBook
+-> sender script posts event to Raspberry Pi backend
+-> Express backend receives event
+-> Socket.IO broadcasts update
+-> React frontend on Raspberry Pi display updates the agent
 ```
+
+Current Raspberry Pi backend URL:
+
+```text
+http://192.168.4.127:3001
+```
+
+If the Raspberry Pi IP changes, update the sender scripts in `server/`.
+
+## Current Agents
+
+The visible room currently shows:
+
+- Codex
+- Claude
+
+ChatGPT still exists in fallback/backend data, but it is not currently rendered in the room scene.
 
 ## Current Features
 
-- React/Vite frontend running at `http://localhost:5173/`
-- Express backend running at `http://localhost:3001/`
-- Socket.IO realtime updates from backend to frontend
-- Three visible agents: Codex, Claude, and ChatGPT
-- Open Codex Session button that opens or brings Codex Desktop forward
-- Backend connected/disconnected status banner
-- Claude state test buttons in the UI
-- Backend event endpoint for external updates
-- Claude event sender script
-- Codex event sender script
-- Quiet failure handling when the backend is not running
-- `lastUpdate` timestamp display for agent state changes
+- React/Vite frontend
+- Express backend
+- Socket.IO realtime state updates
+- Raspberry Pi 5 + 5in touchscreen display support
+- SVG bedroom scene
+- Codex and Claude SVG agent characters
+- Thought bubble above each visible agent
+- State icon inside each thought bubble
+- Automatic random agent movement across the white floor area
+- Drag and drop agents within the floor boundary
+- Agent SVG shakes while dragged
+- Active/non-resting agents come to the front
+- Sprite animation plays when an agent receives a non-resting state update
+- Sprite animation loops 4 times, then returns to the static SVG
+- `finished` state returns to `resting` after 30 seconds
+- Backend online/offline status label
+- Bottom-left open/close update panel
+- Update panel only logs `finished` events
+- Update panel has Claude and Codex columns
+- Update panel auto-scrolls to the newest finished update
+- Quiet sender script failures when backend is offline
 
 ## Agent States
 
-The current UI supports these states:
+Supported states:
 
 ```text
 resting
@@ -47,38 +70,46 @@ blocked
 finished
 ```
 
-Each state maps to a visual style in `src/App.css`.
+State icons live in:
+
+```text
+src/assets/states/
+```
+
+Agent assets live in:
+
+```text
+src/assets/agents/
+src/assets/agents-sprite/
+```
 
 ## Project Structure
 
 ```text
 phase1-software/
   server/
-    index.js              Backend server and realtime event broadcaster
-    sendClaudeEvent.js    Helper script for sending Claude events
-    sendCodexEvent.js     Helper script for sending Codex events
-    sendCodexNotify.js    Wrapper for Codex turn-ended notifications
+    index.js              Express + Socket.IO backend
+    sendClaudeEvent.js    Sends Claude Code events to backend
+    sendCodexEvent.js     Sends manual Codex events to backend
+    sendCodexNotify.js    Sends Codex finished events after Codex notify
   src/
-    App.tsx               Main React app and agent UI
-    App.css               Layout and state styling
-    main.tsx              React app entry point
-    index.css             Global styling
-  package.json            Scripts and dependencies
+    assets/
+      agents/             Static agent SVGs
+      agents-sprite/      7-frame sprite animations
+      room/               Bedroom SVG
+      states/             Thought bubble and state icons
+    App.tsx               Main React app
+    App.css               Scene layout, movement, drag, sprite styling
+    main.tsx              React entry point
+  package.json            Project scripts and dependencies
 ```
 
-## Install Dependencies
+## Run On Raspberry Pi
 
-Run this once after cloning the project:
-
-```bash
-npm install
-```
-
-## Run The Backend
-
-Open one terminal and run:
+Open one Raspberry Pi terminal for the backend:
 
 ```bash
+cd ~/phase1-software
 npm run server
 ```
 
@@ -88,7 +119,97 @@ Expected output:
 Server running on http://localhost:3001
 ```
 
-The backend provides:
+Open a second Raspberry Pi terminal for the frontend:
+
+```bash
+cd ~/phase1-software
+npm run dev -- --host 0.0.0.0
+```
+
+Open Chromium on the Raspberry Pi:
+
+```text
+http://localhost:5173
+```
+
+The app should appear on the 5in touchscreen and in Raspberry Pi screen share.
+
+## Copy Project From Mac To Raspberry Pi
+
+Use `rsync` instead of `scp` so `node_modules`, `dist`, and `.git` are not copied.
+
+Run from the MacBook:
+
+```bash
+rsync -av --exclude node_modules --exclude dist --exclude .git /Users/ireenj/Desktop/workspace/0-coding-projects/ai-workspace-doc/phase1-software/ ireenj@192.168.4.127:~/phase1-software/
+```
+
+Then on the Raspberry Pi:
+
+```bash
+cd ~/phase1-software
+npm install
+```
+
+## Mac Sender Scripts
+
+Claude Code and Codex run on the MacBook, so the sender scripts on the MacBook need to send events to the Raspberry Pi backend.
+
+Current sender script target:
+
+```text
+http://192.168.4.127:3001/events
+```
+
+Files using this URL:
+
+```text
+server/sendClaudeEvent.js
+server/sendCodexEvent.js
+server/sendCodexNotify.js
+```
+
+If the Raspberry Pi IP changes, update these three files on the MacBook.
+
+## Manual Event Tests From Mac
+
+With the Raspberry Pi backend and frontend running, test Claude from the Mac:
+
+```bash
+cd /Users/ireenj/Desktop/workspace/0-coding-projects/ai-workspace-doc/phase1-software
+node server/sendClaudeEvent.js claude_thinking
+```
+
+Claude should change state on the Raspberry Pi display.
+
+Test Claude finished:
+
+```bash
+node server/sendClaudeEvent.js claude_finished
+```
+
+Claude should show `finished`, and the update panel should log one finished timestamp.
+
+Test Codex:
+
+```bash
+node server/sendCodexEvent.js codex_thinking
+node server/sendCodexEvent.js codex_finished
+```
+
+Codex should update on the Raspberry Pi display. Only `codex_finished` should appear in the timestamp panel.
+
+## Backend API
+
+The backend runs on:
+
+```text
+http://localhost:3001
+```
+
+on whichever machine is running `server/index.js`.
+
+Endpoints:
 
 ```text
 GET /agents
@@ -96,108 +217,31 @@ POST /events
 POST /codex/open
 ```
 
-## Run The Frontend
-
-Open a second terminal and run:
-
-```bash
-npm run dev
-```
-
-Then open:
-
-```text
-http://localhost:5173/
-```
-
-## Test A Claude Event Manually
-
-With the backend and frontend both running, send a manual Claude event:
-
-```bash
-node server/sendClaudeEvent.js claude_tool_use "Claude Code is running a tool"
-```
-
-Expected result:
-
-```text
-The Claude card changes to running_tool in the browser.
-```
-
-## Test A Codex Event Manually
-
-With the backend and frontend both running, send a manual Codex event:
-
-```bash
-node server/sendCodexEvent.js codex_finished "Codex finished the current turn"
-```
-
-Expected result:
-
-```text
-The Codex card changes to finished in the browser, then returns to resting after 60 seconds.
-```
-
-## Open A Codex Session
-
-The Codex control panel includes an `Open Codex Session` button.
-
-When clicked, it calls:
-
-```text
-POST http://localhost:3001/codex/open
-```
-
-Expected behavior:
-
-```text
-Codex changes to thinking
-Codex Desktop opens or comes to the front
-after 3 seconds, Codex changes to working
-when Codex turn-ended notify fires, Codex changes to finished
-after 60 seconds, Codex returns to resting
-```
-
-This is a no-permission pseudo-hook. It does not read the screen or monitor the Codex UI. It uses the button click as the session-start signal and Codex's existing notify behavior as the session-finished signal.
-
-## Backend Event Format
-
-The backend accepts events at:
-
-```text
-POST http://localhost:3001/events
-```
-
-Example payload:
+Example event payload:
 
 ```json
 {
   "agentId": "claude",
-  "state": "blocked",
-  "activity": "Blocked by missing information"
+  "eventType": "claude_finished",
+  "activity": "Claude Code finished"
 }
 ```
 
-The backend also accepts Claude-specific event types:
+## Event Mappings
 
-```json
-{
-  "agentId": "claude",
-  "eventType": "claude_tool_use",
-  "activity": "Claude Code is running a tool"
-}
-```
-
-Current Claude event mappings:
+Claude event mappings:
 
 ```text
+claude_resting -> resting
+claude_thinking -> thinking
 claude_working -> working
 claude_tool_use -> running_tool
 claude_needs_approval -> needs_approval
+claude_blocked -> blocked
 claude_finished -> finished
 ```
 
-Current Codex event mappings:
+Codex event mappings:
 
 ```text
 codex_thinking -> thinking
@@ -209,48 +253,95 @@ codex_finished -> finished
 codex_resting -> resting
 ```
 
-## Claude Code Hook Setup
+## Claude Code Hook Notes
 
-This repo includes the event sender script, but personal Claude Code hook settings should not be committed. For a global Claude Code setup, configure hooks in:
+Claude Code hooks are configured outside this repo, usually in:
 
 ```text
 ~/.claude/settings.json
 ```
 
-Use absolute paths for both Node and `server/sendClaudeEvent.js` so the hook works even when Claude Code runs from another project folder.
+Use absolute paths for:
 
-Example command shape:
+- Node
+- `server/sendClaudeEvent.js`
 
-```text
-/absolute/path/to/node /absolute/path/to/phase1-software/server/sendClaudeEvent.js claude_tool_use "Claude Code is running a tool"
-```
+The sender script exits quietly if the backend is offline, so Claude Code sessions are not interrupted when the dock is not running.
 
-## Quiet Failure Handling
+## Codex Notify Notes
 
-`server/sendClaudeEvent.js` exits successfully if the backend is off. This prevents global Claude Code hooks from interrupting normal Claude Code sessions when the AI workspace dock is not running.
-
-Expected behavior:
+Codex finished detection uses `server/sendCodexNotify.js`. This wrapper runs the existing Codex desktop notification command and also sends:
 
 ```text
-Backend on -> event updates the app
-Backend off -> script exits quietly
+codex_finished
 ```
 
-## Push Safety Notes
+to the backend.
 
-Do not commit personal Claude Code settings:
+Codex notify is configured outside this repo in the local Codex config.
+
+## Development Commands
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Run backend:
+
+```bash
+npm run server
+```
+
+Run frontend:
+
+```bash
+npm run dev -- --host 0.0.0.0
+```
+
+Lint:
+
+```bash
+npm run lint
+```
+
+Build:
+
+```bash
+npm run build
+```
+
+## Git And Privacy Notes
+
+Do not commit private local configuration files such as:
 
 ```text
 .claude/
+~/.claude/settings.json
+~/.codex/config.toml
 ```
 
-Local Claude settings can contain machine-specific hook commands and paths. They are not needed for someone else to run the prototype.
+These can contain machine-specific absolute paths, local usernames, and hook configuration.
 
-## Next Steps
+Also avoid committing:
 
-- Add a connected/disconnected backend status banner
-- Add recent event history
-- Improve the visual layout so it feels more like an ambient dock
-- Add clearer icons or animations for important states
-- Test at small-screen sizes such as `800x480` and `1024x600`
-- Move to hardware only after the desktop prototype is reliable and readable
+```text
+node_modules/
+dist/
+```
+
+## Current Hardware Status
+
+Working hardware/software loop:
+
+```text
+Raspberry Pi 5
+5in touchscreen display
+Raspberry Pi OS
+React app open in Chromium at http://localhost:5173
+Backend running on Raspberry Pi at http://localhost:3001
+MacBook sender scripts posting to Raspberry Pi IP
+```
+
+The project is now past the basic desktop software test and is running as an early hardware display prototype.

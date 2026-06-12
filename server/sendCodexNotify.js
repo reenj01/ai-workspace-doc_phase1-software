@@ -16,7 +16,7 @@ const runExistingNotify = () =>
 
 const sendCodexFinished = async () => {
   try {
-    const response = await fetch('http://localhost:3001/events', {
+    const response = await fetch('http://192.168.4.127:3001/events', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

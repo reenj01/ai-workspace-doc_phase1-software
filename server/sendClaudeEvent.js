@@ -8,7 +8,7 @@ if (!eventType) {
 }
 
 try {
-  const response = await fetch('http://localhost:3001/events', {
+  const response = await fetch('http://192.168.4.127:3001/events', {
     method: 'POST', // tells backend this request is sending data
     headers: {
       'Content-Type': 'application/json',

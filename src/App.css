@@ -14,13 +14,21 @@ body,
   background: #f8fafc;
 }
 
-.room-background {
+.room-stage {
   position: absolute;
   width: 60%;
-  height: auto;
+  aspect-ratio: 520 / 435;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
+}
+
+.room-background {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  left: 0;
+  top: 0;
   object-fit: contain;
   user-select: none;
   -webkit-user-drag: none;
@@ -56,6 +64,67 @@ body,
   color: #6b7280;
 }
 
+.updates-panel {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  z-index: 20;
+  width: min(360px, calc(100vw - 32px));
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.82);
+  font-family: Arial, sans-serif;
+}
+
+.updates-panel-closed {
+  width: auto;
+}
+
+.updates-toggle {
+  width: 100%;
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #9ca3af;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.updates-list {
+  max-height: 150px;
+  overflow: auto;
+  padding: 2px 10px 8px;
+}
+
+.updates-empty,
+.updates-log,
+.updates-column-title {
+  margin: 6px 0 0;
+  color: #a3a3a3;
+  font-size: 10px;
+  line-height: 1.25;
+}
+
+.updates-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 14px;
+}
+
+.updates-column-title {
+  color: #9ca3af;
+  font-weight: 700;
+}
+
+.updates-log {
+  display: grid;
+  grid-template-columns: 58px 1fr;
+  column-gap: 6px;
+}
+
 .agents-layer {
   position: absolute;
   inset: 0;
@@ -65,17 +134,33 @@ body,
   position: absolute;
   width: clamp(48px, 7vw, 80px);
   aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  transition-property: left, top;
+  transition-duration: 14s;
+  transition-timing-function: ease-in-out;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
 }
 
-.visual-agent-codex {
-  left: 65%;
-  bottom: 40%;
-  transform: translateX(-100%);
+.visual-agent:active {
+  cursor: grabbing;
 }
 
-.visual-agent-claude {
-  left: 45%;
-  bottom: 25%;
+.agent-drag-visuals {
+  position: absolute;
+  inset: 0;
+  transform-origin: bottom center;
+}
+
+@keyframes agent-pickup-shake {
+  from {
+    transform: translateX(-50%) rotate(-10deg);
+  }
+
+  to {
+    transform: translateX(-50%) rotate(10deg);
+  }
 }
 
 .agent-sprite {
@@ -86,9 +171,29 @@ body,
   height: 100%;
   object-fit: contain;
   transform: translateX(-50%);
+  transform-origin: bottom center;
   user-select: none;
   -webkit-user-drag: none;
   pointer-events: none;
+}
+
+.agent-sprite-codex.agent-sprite-static {
+  width: 93%;
+  height: 93%;
+}
+
+.agent-sprite-claude.agent-sprite-static {
+  width: 100%;
+  height: 100%;
+}
+
+.agent-sprite-claude.agent-sprite-animated {
+  transform: translate(-50%, 3%) scale(1.2);
+}
+
+.agent-sprite-dragging {
+  animation: agent-pickup-shake 0.24s ease-in-out infinite alternate;
+  transform-origin: top center;
 }
 
 .thought-bubble {
