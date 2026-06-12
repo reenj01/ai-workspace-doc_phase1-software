@@ -16,7 +16,7 @@ body,
 
 .room-stage {
   position: absolute;
-  width: 60%;
+  width: 66.15%;
   aspect-ratio: 520 / 435;
   left: 50%;
   top: 50%;
@@ -66,13 +66,20 @@ body,
 
 .updates-panel {
   position: absolute;
-  left: 16px;
   bottom: 16px;
   z-index: 20;
-  width: min(360px, calc(100vw - 32px));
+  width: min(142.5px, calc(100vw - 32px));
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.58);
   font-family: Arial, sans-serif;
+}
+
+.updates-panel-left {
+  left: 16px;
+}
+
+.updates-panel-right {
+  right: 16px;
 }
 
 .updates-panel-closed {
@@ -84,7 +91,7 @@ body,
   border: 0;
   border-radius: 8px;
   padding: 8px 10px;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.58);
   color: #9ca3af;
   font: inherit;
   font-size: 11px;
@@ -132,7 +139,7 @@ body,
 
 .visual-agent {
   position: absolute;
-  width: clamp(48px, 7vw, 80px);
+  width: clamp(50.4px, 7.35vw, 84px);
   aspect-ratio: 1;
   transform: translate(-50%, -50%);
   transition-property: left, top;
@@ -200,7 +207,7 @@ body,
   position: absolute;
   right: -42%;
   top: -30%;
-  width: 58%;
+  width: 62.06%;
   height: auto;
   z-index: 2;
   user-select: none;
@@ -212,7 +219,7 @@ body,
   position: absolute;
   right: -26%;
   top: -20%;
-  width: 24%;
+  width: 25.68%;
   height: auto;
   z-index: 3;
   user-select: none;

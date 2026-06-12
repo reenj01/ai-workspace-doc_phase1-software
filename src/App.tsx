@@ -226,9 +226,11 @@ function App() {
   const [spriteAnimations, setSpriteAnimations] = useState(startingSpriteAnimations)
   const [draggingAgentId, setDraggingAgentId] = useState<string | null>(null)
   const [updateLogs, setUpdateLogs] = useState<StateUpdateLog[]>([])
-  const [updatesPanelOpen, setUpdatesPanelOpen] = useState(true)
+  const [claudeUpdatesPanelOpen, setClaudeUpdatesPanelOpen] = useState(true)
+  const [codexUpdatesPanelOpen, setCodexUpdatesPanelOpen] = useState(true)
   const roomStageRef = useRef<HTMLDivElement>(null)
-  const updatesListRef = useRef<HTMLDivElement>(null)
+  const claudeUpdatesListRef = useRef<HTMLDivElement>(null)
+  const codexUpdatesListRef = useRef<HTMLDivElement>(null)
 
   function addStateUpdateLog(agent: Agent) {
     if ((agent.id !== 'codex' && agent.id !== 'claude') || agent.state !== 'finished') {
@@ -486,12 +488,14 @@ function App() {
   }, [draggingAgentId])
 
   useEffect(() => {
-    if (!updatesPanelOpen || !updatesListRef.current) {
-      return
+    if (claudeUpdatesPanelOpen && claudeUpdatesListRef.current) {
+      claudeUpdatesListRef.current.scrollTop = claudeUpdatesListRef.current.scrollHeight
     }
 
-    updatesListRef.current.scrollTop = updatesListRef.current.scrollHeight
-  }, [updateLogs, updatesPanelOpen])
+    if (codexUpdatesPanelOpen && codexUpdatesListRef.current) {
+      codexUpdatesListRef.current.scrollTop = codexUpdatesListRef.current.scrollHeight
+    }
+  }, [updateLogs, claudeUpdatesPanelOpen, codexUpdatesPanelOpen])
 
   function startDraggingAgent(agentId: string, event: ReactPointerEvent<HTMLDivElement>) {
     event.preventDefault()
@@ -507,35 +511,40 @@ function App() {
       <div className={`backend-status backend-status-${backendStatus}`}>
         Backend {backendStatus}
       </div>
-      <section className={`updates-panel ${updatesPanelOpen ? 'updates-panel-open' : 'updates-panel-closed'}`}>
-        <button className='updates-toggle' type='button' onClick={() => setUpdatesPanelOpen((isOpen) => !isOpen)}>
-          {updatesPanelOpen ? 'Close updates' : 'Open updates'}
+      <section className={`updates-panel updates-panel-left ${claudeUpdatesPanelOpen ? 'updates-panel-open' : 'updates-panel-closed'}`}>
+        <button className='updates-toggle' type='button' onClick={() => setClaudeUpdatesPanelOpen((isOpen) => !isOpen)}>
+          {claudeUpdatesPanelOpen ? 'Close Claude' : 'Open Claude'}
         </button>
-        {updatesPanelOpen && (
-          <div className='updates-list' ref={updatesListRef}>
-            {updateLogs.length === 0 ? (
+        {claudeUpdatesPanelOpen && (
+          <div className='updates-list' ref={claudeUpdatesListRef}>
+            {claudeUpdateLogs.length === 0 ? (
               <p className='updates-empty'>No finished updates yet</p>
             ) : (
-              <div className='updates-columns'>
-                <div className='updates-column'>
-                  <p className='updates-column-title'>Claude</p>
-                  {claudeUpdateLogs.map((log) => (
-                    <p className='updates-log' key={log.id}>
-                      <span>{formatLogTime(log.timestamp)}</span>
-                      <span>finished</span>
-                    </p>
-                  ))}
-                </div>
-                <div className='updates-column'>
-                  <p className='updates-column-title'>Codex</p>
-                  {codexUpdateLogs.map((log) => (
-                    <p className='updates-log' key={log.id}>
-                      <span>{formatLogTime(log.timestamp)}</span>
-                      <span>finished</span>
-                    </p>
-                  ))}
-                </div>
-              </div>
+              claudeUpdateLogs.map((log) => (
+                <p className='updates-log' key={log.id}>
+                  <span>{formatLogTime(log.timestamp)}</span>
+                  <span>finished</span>
+                </p>
+              ))
+            )}
+          </div>
+        )}
+      </section>
+      <section className={`updates-panel updates-panel-right ${codexUpdatesPanelOpen ? 'updates-panel-open' : 'updates-panel-closed'}`}>
+        <button className='updates-toggle' type='button' onClick={() => setCodexUpdatesPanelOpen((isOpen) => !isOpen)}>
+          {codexUpdatesPanelOpen ? 'Close Codex' : 'Open Codex'}
+        </button>
+        {codexUpdatesPanelOpen && (
+          <div className='updates-list' ref={codexUpdatesListRef}>
+            {codexUpdateLogs.length === 0 ? (
+              <p className='updates-empty'>No finished updates yet</p>
+            ) : (
+              codexUpdateLogs.map((log) => (
+                <p className='updates-log' key={log.id}>
+                  <span>{formatLogTime(log.timestamp)}</span>
+                  <span>finished</span>
+                </p>
+              ))
             )}
           </div>
         )}
